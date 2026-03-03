@@ -1,0 +1,5 @@
+[plugin]
+description = "dokku uptime plugin for Uptime Kuma monitoring"
+version = "0.1.0"
+
+[plugin.config]

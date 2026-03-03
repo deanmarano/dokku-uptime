@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config"
+source "$PLUGIN_CORE_AVAILABLE_PATH/common/functions"
+source "$PLUGIN_CORE_AVAILABLE_PATH/common/property-functions"
+
+fn-uptime-kuma() {
+  local KUMA_URL KUMA_USERNAME KUMA_PASSWORD
+  KUMA_URL=$(fn-plugin-property-get "uptime" "--global" "url" "")
+  KUMA_USERNAME=$(fn-plugin-property-get "uptime" "--global" "username" "")
+  KUMA_PASSWORD=$(fn-plugin-property-get "uptime" "--global" "password" "")
+
+  if [[ -z "$KUMA_URL" ]] || [[ -z "$KUMA_USERNAME" ]] || [[ -z "$KUMA_PASSWORD" ]]; then
+    dokku_log_fail "Uptime Kuma credentials not configured. Run: dokku uptime:set --global url|username|password <value>"
+  fi
+
+  KUMA__URL="$KUMA_URL" KUMA__USERNAME="$KUMA_USERNAME" KUMA__PASSWORD="$KUMA_PASSWORD" \
+    "$KUMA_BIN" "$@"
+}
+
+fn-uptime-is-disabled() {
+  local APP="$1"
+  local disabled
+  disabled=$(fn-plugin-property-get "uptime" "$APP" "disabled" "false")
+  [[ "$disabled" == "true" ]]
+}
+
+fn-uptime-get-monitor-id() {
+  local APP="$1"
+  fn-plugin-property-get "uptime" "$APP" "monitor-id" ""
+}
+
+fn-uptime-set-monitor-id() {
+  local APP="$1"
+  local MONITOR_ID="$2"
+  fn-plugin-property-write "uptime" "$APP" "monitor-id" "$MONITOR_ID"
+}
+
+fn-uptime-delete-monitor-id() {
+  local APP="$1"
+  fn-plugin-property-delete "uptime" "$APP" "monitor-id"
+}
+
+fn-uptime-create-monitor() {
+  local APP="$1"
+  local DOMAIN INTERVAL MAX_RETRIES MONITOR_URL MONITOR_JSON RESULT MONITOR_ID
+
+  DOMAIN=$(dokku domains:report "$APP" --domains-app-vhosts 2>/dev/null | head -1)
+  if [[ -z "$DOMAIN" ]]; then
+    dokku_log_warn "No domain found for $APP, skipping uptime monitor"
+    return 0
+  fi
+
+  INTERVAL=$(fn-plugin-property-get "uptime" "--global" "interval" "60")
+  MAX_RETRIES=$(fn-plugin-property-get "uptime" "--global" "max-retries" "3")
+  MONITOR_URL="https://${DOMAIN}"
+
+  local TMPFILE
+  TMPFILE=$(mktemp)
+  trap "rm -f $TMPFILE" RETURN
+
+  cat > "$TMPFILE" <<EOF
+{
+  "type": "http",
+  "name": "dokku/${APP}",
+  "url": "${MONITOR_URL}",
+  "method": "GET",
+  "interval": ${INTERVAL},
+  "maxretries": ${MAX_RETRIES}
+}
+EOF
+
+  dokku_log_info1 "Creating uptime monitor for $APP at $MONITOR_URL"
+  RESULT=$(fn-uptime-kuma monitor add --config "$TMPFILE" 2>&1) || {
+    dokku_log_warn "Failed to create uptime monitor for $APP: $RESULT"
+    return 1
+  }
+
+  MONITOR_ID=$(echo "$RESULT" | grep -oP 'id[=: ]+\K\d+' | head -1)
+  if [[ -z "$MONITOR_ID" ]]; then
+    MONITOR_ID=$(echo "$RESULT" | grep -oP '\d+' | tail -1)
+  fi
+
+  if [[ -n "$MONITOR_ID" ]]; then
+    fn-uptime-set-monitor-id "$APP" "$MONITOR_ID"
+    dokku_log_info1 "Uptime monitor created with ID $MONITOR_ID"
+  else
+    dokku_log_warn "Monitor may have been created but could not parse ID from: $RESULT"
+  fi
+}
+
+fn-uptime-delete-monitor() {
+  local APP="$1"
+  local MONITOR_ID
+
+  MONITOR_ID=$(fn-uptime-get-monitor-id "$APP")
+  if [[ -z "$MONITOR_ID" ]]; then
+    return 0
+  fi
+
+  dokku_log_info1 "Deleting uptime monitor $MONITOR_ID for $APP"
+  fn-uptime-kuma monitor delete "$MONITOR_ID" 2>&1 || {
+    dokku_log_warn "Failed to delete uptime monitor $MONITOR_ID for $APP"
+  }
+
+  fn-uptime-delete-monitor-id "$APP"
+}

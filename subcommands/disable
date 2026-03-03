@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -eo pipefail
+[[ $DOKKU_TRACE ]] && set -x
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/functions"
+
+fn-uptime-disable() {
+  declare APP="$1"
+
+  [[ -z "$APP" ]] && dokku_log_fail "Please specify an app to run the command on"
+  verify_app_name "$APP"
+
+  fn-plugin-property-write "uptime" "$APP" "disabled" "true"
+  dokku_log_info1 "Uptime monitoring disabled for $APP"
+
+  fn-uptime-delete-monitor "$APP"
+}
+
+fn-uptime-disable "$2"

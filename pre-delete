@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -eo pipefail
+[[ $DOKKU_TRACE ]] && set -x
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/functions"
+
+APP="$1"
+
+fn-uptime-delete-monitor "$APP"

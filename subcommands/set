@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -eo pipefail
+[[ $DOKKU_TRACE ]] && set -x
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/functions"
+
+fn-uptime-set() {
+  local GLOBAL=false
+  local APP KEY VALUE
+
+  shift # remove "uptime:set"
+
+  if [[ "$1" == "--global" ]]; then
+    GLOBAL=true
+    shift
+  fi
+
+  if [[ "$GLOBAL" == "true" ]]; then
+    KEY="$1"
+    VALUE="$2"
+    [[ -z "$KEY" ]] && dokku_log_fail "Please specify a key"
+    [[ -z "$VALUE" ]] && dokku_log_fail "Please specify a value"
+    fn-plugin-property-write "uptime" "--global" "$KEY" "$VALUE"
+    dokku_log_info1 "Set global uptime property $KEY"
+  else
+    APP="$1"
+    KEY="$2"
+    VALUE="$3"
+    [[ -z "$APP" ]] && dokku_log_fail "Please specify an app or --global"
+    verify_app_name "$APP"
+    [[ -z "$KEY" ]] && dokku_log_fail "Please specify a key"
+    [[ -z "$VALUE" ]] && dokku_log_fail "Please specify a value"
+    fn-plugin-property-write "uptime" "$APP" "$KEY" "$VALUE"
+    dokku_log_info1 "Set uptime property $KEY for $APP"
+  fi
+}
+
+fn-uptime-set "$@"
