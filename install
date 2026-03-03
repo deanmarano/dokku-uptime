@@ -13,17 +13,10 @@ mkdir -p "$PLUGIN_CONFIG_ROOT"
 
 fn-plugin-property-setup "uptime"
 
-ARCH=$(uname -m)
-case "$ARCH" in
-  x86_64) BINARY_NAME="kuma-cli-x86_64-unknown-linux-gnu" ;;
-  aarch64) BINARY_NAME="kuma-cli-aarch64-unknown-linux-gnu" ;;
-  *) dokku_log_fail "Unsupported architecture: $ARCH" ;;
-esac
+DOWNLOAD_URL="https://github.com/BigBoot/AutoKuma/releases/download/${KUMA_CLI_VERSION}/kuma-linux"
 
-DOWNLOAD_URL="https://github.com/BigBoot/AutoKuma/releases/download/${KUMA_CLI_VERSION}/${BINARY_NAME}"
-
-if [[ ! -f "$KUMA_BIN" ]]; then
-  dokku_log_info1 "Downloading kuma-cli ${KUMA_CLI_VERSION} for ${ARCH}..."
+if [[ ! -f "$KUMA_BIN" ]] || [[ ! -s "$KUMA_BIN" ]] || ! "$KUMA_BIN" --version &>/dev/null; then
+  dokku_log_info1 "Downloading kuma-cli ${KUMA_CLI_VERSION}..."
   curl -sSL "$DOWNLOAD_URL" -o "$KUMA_BIN"
   chmod +x "$KUMA_BIN"
   dokku_log_info1 "kuma-cli installed at $KUMA_BIN"
