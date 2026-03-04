@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -eo pipefail
+[[ $DOKKU_TRACE ]] && set -x
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/functions"
+
+fn-uptime-discover() {
+  local APPS APP MONITOR_ID SKIPPED=0 CREATED=0 EXISTING=0
+
+  APPS=$(dokku apps:list 2>/dev/null | tail -n +2)
+  if [[ -z "$APPS" ]]; then
+    dokku_log_info1 "No apps found"
+    return 0
+  fi
+
+  dokku_log_info1 "Discovering apps for uptime monitoring..."
+
+  for APP in $APPS; do
+    if fn-uptime-is-disabled "$APP"; then
+      dokku_log_verbose "Skipping $APP (disabled)"
+      ((SKIPPED++)) || true
+      continue
+    fi
+
+    MONITOR_ID=$(fn-uptime-get-monitor-id "$APP")
+    if [[ -n "$MONITOR_ID" ]]; then
+      dokku_log_verbose "Skipping $APP (monitor $MONITOR_ID already exists)"
+      ((EXISTING++)) || true
+      continue
+    fi
+
+    fn-uptime-create-monitor "$APP" && ((CREATED++)) || true
+  done
+
+  dokku_log_info1 "Discovery complete: $CREATED created, $EXISTING already monitored, $SKIPPED disabled"
+}
+
+fn-uptime-discover

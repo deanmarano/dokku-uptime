@@ -13,6 +13,7 @@ case "$1" in
     uptime:status <app>, Show uptime monitoring status for an app
     uptime:enable <app>, Enable uptime monitoring for an app
     uptime:disable <app>, Disable uptime monitoring for an app
+    uptime:discover, Scan all apps and create missing monitors
     uptime:set [--global] <key> <value>, Set uptime configuration
 help_content
     }
