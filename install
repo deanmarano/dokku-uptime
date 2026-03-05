@@ -1,25 +1,41 @@
 #!/usr/bin/env bash
 set -eo pipefail
-[[ $DOKKU_TRACE ]] && set -x
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/config"
-source "$PLUGIN_CORE_AVAILABLE_PATH/common/functions"
+PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$PLUGIN_DIR/config"
 source "$PLUGIN_CORE_AVAILABLE_PATH/common/property-functions"
-
-dokku_log_info1 "Installing dokku-uptime plugin"
 
 mkdir -p "$PLUGIN_DATA_ROOT"
 mkdir -p "$PLUGIN_CONFIG_ROOT"
 
 fn-plugin-property-setup "uptime"
 
-DOWNLOAD_URL="https://github.com/BigBoot/AutoKuma/releases/download/${KUMA_CLI_VERSION}/kuma-linux"
+URL="https://github.com/BigBoot/AutoKuma/releases/download/${KUMA_CLI_VERSION}/kuma-linux"
 
-if [[ ! -f "$KUMA_BIN" ]] || [[ ! -s "$KUMA_BIN" ]] || ! "$KUMA_BIN" --version &>/dev/null; then
-  dokku_log_info1 "Downloading kuma-cli ${KUMA_CLI_VERSION}..."
-  curl -sSL "$DOWNLOAD_URL" -o "$KUMA_BIN"
-  chmod +x "$KUMA_BIN"
-  dokku_log_info1 "kuma-cli installed at $KUMA_BIN"
+TMPFILE=$(mktemp "$PLUGIN_DIR/kuma-bin.XXXXXX")
+trap "rm -f '$TMPFILE'" EXIT
+
+if [[ -x "$PLUGIN_DIR/kuma-bin" ]]; then
+  HTTP_CODE=$(curl -fsSL -z "$PLUGIN_DIR/kuma-bin" -o "$TMPFILE" -w "%{http_code}" "$URL" 2>/dev/null || echo "000")
+  if [[ "$HTTP_CODE" == "304" ]]; then
+    :
+  elif [[ "$HTTP_CODE" == "200" ]]; then
+    mv "$TMPFILE" "$PLUGIN_DIR/kuma-bin"
+    chmod +x "$PLUGIN_DIR/kuma-bin"
+    chown dokku:dokku "$PLUGIN_DIR/kuma-bin"
+    echo "dokku-uptime: kuma-cli updated successfully"
+  else
+    echo "dokku-uptime: update check failed (HTTP ${HTTP_CODE}), keeping existing binary" >&2
+  fi
 else
-  dokku_log_info1 "kuma-cli already installed at $KUMA_BIN"
+  echo "dokku-uptime: downloading kuma-cli ${KUMA_CLI_VERSION}..."
+  if curl -fsSL -o "$TMPFILE" "$URL"; then
+    mv "$TMPFILE" "$PLUGIN_DIR/kuma-bin"
+    chmod +x "$PLUGIN_DIR/kuma-bin"
+    chown dokku:dokku "$PLUGIN_DIR/kuma-bin"
+    echo "dokku-uptime: kuma-cli installed successfully"
+  else
+    echo "dokku-uptime: download failed, is GitHub reachable?" >&2
+    exit 1
+  fi
 fi

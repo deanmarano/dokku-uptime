@@ -3,5 +3,6 @@
 export PLUGIN_COMMAND_PREFIX="uptime"
 export PLUGIN_DATA_ROOT="/var/lib/dokku/data/uptime"
 export PLUGIN_CONFIG_ROOT="/var/lib/dokku/config/uptime"
-export KUMA_BIN="${PLUGIN_DATA_ROOT}/kuma"
-export KUMA_CLI_VERSION="v2.0.0"
+export PLUGIN_DIR="${PLUGIN_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+export KUMA_BIN="${PLUGIN_DIR}/kuma-bin"
+export KUMA_CLI_VERSION="v1.0.0"
