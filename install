@@ -5,7 +5,6 @@ PLUGIN_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$PLUGIN_DIR/config"
 source "$PLUGIN_CORE_AVAILABLE_PATH/common/property-functions"
 
-mkdir -p "$PLUGIN_DATA_ROOT"
 mkdir -p "$PLUGIN_CONFIG_ROOT"
 
 fn-plugin-property-setup "uptime"
