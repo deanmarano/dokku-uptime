@@ -10,6 +10,8 @@ When you deploy an app, a monitor is created. When you destroy an app, the monit
 - Uptime Kuma instance (1.x) accessible from the Dokku server
 - `jq` and `curl` installed on the host
 
+Don't have Uptime Kuma running yet? [dokku-library](https://github.com/deanmarano/dokku-library) can set it up in one command. If you want to put Uptime Kuma behind an auth wall, check out [dokku-sso](https://github.com/deanmarano/dokku-sso).
+
 ## Installation
 
 ```bash
