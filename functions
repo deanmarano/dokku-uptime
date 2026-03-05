@@ -45,7 +45,7 @@ fn-uptime-create-monitor() {
   local APP="$1"
   local DOMAIN INTERVAL MAX_RETRIES MONITOR_URL MONITOR_JSON RESULT MONITOR_ID
 
-  DOMAIN=$(dokku domains:report "$APP" --domains-app-vhosts 2>/dev/null | head -1)
+  DOMAIN=$(dokku domains:report "$APP" --domains-app-vhosts 2>/dev/null | head -1 | awk '{print $1}')
   if [[ -z "$DOMAIN" ]]; then
     dokku_log_warn "No domain found for $APP, skipping uptime monitor"
     return 0
@@ -71,7 +71,7 @@ fn-uptime-create-monitor() {
 EOF
 
   dokku_log_info1 "Creating uptime monitor for $APP at $MONITOR_URL"
-  RESULT=$(fn-uptime-kuma monitor add --config "$TMPFILE" 2>&1) || {
+  RESULT=$(fn-uptime-kuma monitor add "$TMPFILE" 2>&1) || {
     dokku_log_warn "Failed to create uptime monitor for $APP: $RESULT"
     return 1
   }
