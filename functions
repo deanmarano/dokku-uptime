@@ -76,10 +76,7 @@ EOF
     return 1
   }
 
-  MONITOR_ID=$(echo "$RESULT" | grep -oP 'id[=: ]+\K\d+' | head -1)
-  if [[ -z "$MONITOR_ID" ]]; then
-    MONITOR_ID=$(echo "$RESULT" | grep -oP '\d+' | tail -1)
-  fi
+  MONITOR_ID=$(echo "$RESULT" | jq -r '.id // empty' 2>/dev/null)
 
   if [[ -n "$MONITOR_ID" ]]; then
     fn-uptime-set-monitor-id "$APP" "$MONITOR_ID"
