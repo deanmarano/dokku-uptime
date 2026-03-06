@@ -96,7 +96,7 @@ fn-uptime-delete-monitor() {
   fi
 
   dokku_log_info1 "Deleting uptime monitor $MONITOR_ID for $APP"
-  fn-uptime-kuma monitor delete "$MONITOR_ID" 2>&1 || {
+  fn-uptime-kuma monitor delete "$MONITOR_ID" > /dev/null 2>&1 || {
     dokku_log_warn "Failed to delete uptime monitor $MONITOR_ID for $APP"
   }
 
