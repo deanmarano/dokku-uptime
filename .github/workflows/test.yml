@@ -1,0 +1,32 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dokku_version:
+        description: "Specific Dokku version to test (leave empty for all)"
+        required: false
+        type: string
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        dokku_version:
+          - "0.35.20"
+          - "0.36.11"
+          - "0.37.6"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run integration tests (Dokku ${{ matrix.dokku_version }})
+        env:
+          DOKKU_VERSION: ${{ matrix.dokku_version }}
+        run: ./tests/run.sh
