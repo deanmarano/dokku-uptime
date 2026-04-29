@@ -41,9 +41,21 @@ fn-uptime-delete-monitor-id() {
   fn-plugin-property-delete "uptime" "$APP" "monitor-id"
 }
 
+fn-uptime-has-ports() {
+  local APP="$1"
+  local PORTS
+  PORTS=$(dokku ports:report "$APP" --ports-map 2>/dev/null | xargs)
+  [[ -n "$PORTS" ]]
+}
+
 fn-uptime-create-monitor() {
   local APP="$1"
   local DOMAIN INTERVAL MAX_RETRIES MONITOR_URL MONITOR_JSON RESULT MONITOR_ID
+
+  if ! fn-uptime-has-ports "$APP"; then
+    dokku_log_warn "No ports mapped for $APP, skipping uptime monitor"
+    return 0
+  fi
 
   DOMAIN=$(dokku domains:report "$APP" --domains-app-vhosts 2>/dev/null | head -1 | awk '{print $1}')
   if [[ -z "$DOMAIN" ]]; then

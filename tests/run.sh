@@ -235,8 +235,10 @@ echo ""
 echo "=== Test 4: Discover creates monitors ==="
 dokku_exec apps:create app-one 2>&1 || true
 dokku_exec domains:set app-one app-one.dokku.me 2>&1 || true
+dokku_exec git:from-image app-one nginx:latest 2>&1 || true
 dokku_exec apps:create app-two 2>&1 || true
 dokku_exec domains:set app-two app-two.dokku.me 2>&1 || true
+dokku_exec git:from-image app-two nginx:latest 2>&1 || true
 
 OUTPUT=$(dokku_exec uptime:discover 2>&1)
 assert_contains "discover creates monitors" "$OUTPUT" "created"
@@ -349,6 +351,21 @@ dokku_exec apps:destroy deploy-app --force 2>&1 || true
 # App is gone so we check the property file directly
 MONITOR_ID=$(container_exec cat /var/lib/dokku/config/uptime/deploy-app/monitor-id 2>/dev/null || echo "")
 assert_equals "pre-delete removed monitor id" "$MONITOR_ID" ""
+
+# ============================================================
+# Test 14: post-deploy skips apps with no ports mapped
+# ============================================================
+echo ""
+echo "=== Test 14: post-deploy skips apps with no ports ==="
+dokku_exec apps:create no-ports-app 2>&1 || true
+dokku_exec domains:set no-ports-app no-ports-app.dokku.me 2>&1 || true
+
+# Trigger post-deploy without deploying — call the trigger directly
+OUTPUT=$(container_exec /var/lib/dokku/plugins/available/uptime/post-deploy no-ports-app 2>&1 || true)
+assert_contains "post-deploy warns about missing ports" "$OUTPUT" "No ports mapped"
+
+OUTPUT=$(dokku_exec uptime:status no-ports-app 2>&1)
+assert_contains "no monitor created for portless app" "$OUTPUT" "Monitor ID: none"
 
 # ============================================================
 # Test 13: Missing credentials produces error
